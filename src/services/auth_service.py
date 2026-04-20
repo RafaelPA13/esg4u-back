@@ -245,7 +245,7 @@ class AuthService:
 
         template = template_data[0]["conteudo"]
 
-        link = f"http://localhost:5173/reset-password?token={token}" #TODO: Alterar para o link da hospedagem
+        link = f"http://localhost:5173/autenticacao/redefinir-senha?token={token}" #TODO: Alterar para o link da hospedagem
 
         html = template.replace("{{LINK_RESET}}", link)
 
