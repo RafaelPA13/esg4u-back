@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Form
+from fastapi import APIRouter, HTTPException, Form, Header
 from src.schemas.auth_schema import CadastroSchema, LoginSchema
 from src.services.auth_service import auth_service
 
@@ -77,3 +77,11 @@ async def login(data: LoginSchema):
             status_code=401,
             detail="Credenciais inválidas"
         )
+        
+        
+@router.get("/me")
+async def me(authorization: str = Header(...)):
+    try:
+        return await auth_service.me(authorization)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))

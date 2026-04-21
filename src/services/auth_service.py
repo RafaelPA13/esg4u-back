@@ -352,5 +352,53 @@ class AuthService:
         return {
             "token": access_token
         }
+        
+    async def me(self, authorization: str):
+        # authorization vem como "Bearer <token>"
+        if not authorization.startswith("Bearer "):
+            raise Exception("Token inválido")
+
+        access_token = authorization.replace("Bearer ", "").strip()
+
+        # 1. Pegar usuário atual no Supabase Auth
+        async with httpx.AsyncClient() as client:
+            auth_res = await client.get(
+                f"{settings.SUPABASE_URL}/auth/v1/user",
+                headers={
+                    "apikey": settings.SUPABASE_KEY,
+                    "Authorization": f"Bearer {access_token}",
+                }
+            )
+
+        if auth_res.status_code != 200:
+            raise Exception("Não autenticado")
+
+        auth_user = auth_res.json()
+        user_id = auth_user.get("id")
+        email = auth_user.get("email")
+
+        if not user_id:
+            raise Exception("Usuário inválido")
+
+        # 2. Buscar na tabela usuarios
+        user_res = await user_repository.find_by_id(user_id)
+
+        if user_res.status_code != 200 or len(user_res.json()) == 0:
+            # fallback: se não achar na tabela, ainda assim retorna o básico
+            return {
+                "id": user_id,
+                "email": email,
+                "nome": auth_user.get("user_metadata", {}).get("nome"),
+                "admin": False,
+            }
+
+        usuario = user_res.json()[0]
+
+        return {
+            "id": usuario["id"],
+            "nome": usuario.get("nome"),
+            "email": usuario.get("email") or email,
+            "admin": usuario.get("admin", False),
+        }
 
 auth_service = AuthService()
