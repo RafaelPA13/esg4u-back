@@ -105,7 +105,6 @@ class UserRepository:
             )
         return response
 
-
     # Buscar token por user + tipo
     async def get_token_by_user(self, user_id: str, tipo: str):
         async with httpx.AsyncClient() as client:
@@ -122,7 +121,6 @@ class UserRepository:
                 }
             )
         return response
-
 
     # Atualizar token (reenviar)
     async def update_token(self, token_id: str, codigo: str, expires_at: str):
@@ -143,7 +141,6 @@ class UserRepository:
             )
         return response
 
-
     # Marcar token como usado
     async def mark_token_used(self, token_id: str):
         async with httpx.AsyncClient() as client:
@@ -156,6 +153,124 @@ class UserRepository:
                 },
                 params={"id": f"eq.{token_id}"},
                 json={"usado": True}
+            )
+        return response
+
+    async def list_users_paginated(self, page: int, per_page: int, filters: dict | None = None):
+        """
+        Busca uma página de usuários com filtros (sem count).
+        """
+        offset = (page - 1) * per_page
+
+        # Monta query params (filtros)
+        query_params: dict[str, str] = {
+            "order": "nome.asc",  # ordena por nome
+        }
+
+        if filters:
+            for key, value in filters.items():
+                # filtro parcial e case-insensitive
+                query_params[key] = f"ilike.%{value}%"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    # paginação via Range
+                    "Range": f"{offset}-{offset + per_page - 1}",
+                    "Accept": "application/json",
+                },
+                params=query_params,
+            )
+        return response
+
+    async def count_users(self, filters: dict | None = None):
+        """
+        Conta total de usuários com os mesmos filtros.
+        Usa count=exact, sem Range.
+        """
+        query_params: dict[str, str] = {
+            "select": "id",  # qualquer coluna, não importa, o count que interessa
+        }
+
+        if filters:
+            for key, value in filters.items():
+                query_params[key] = f"ilike.%{value}%"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Prefer": "count=exact",
+                    "Accept": "application/json",
+                },
+                params=query_params,
+            )
+        return response
+
+    async def update_user(self, user_id: str, data: dict):
+        """
+        Atualiza um usuário na tabela 'usuarios'.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json"
+                },
+                params={"id": f"eq.{user_id}"},
+                json=data
+            )
+        return response
+
+    async def delete_user_from_db(self, user_id: str):
+        """
+        Deleta um usuário da tabela 'usuarios'.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                },
+                params={"id": f"eq.{user_id}"}
+            )
+        return response
+
+    async def update_supabase_auth_email(self, user_id: str, new_email: str):
+        """
+        Atualiza o email de um usuário no Supabase Auth.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{settings.SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={"email": new_email, "email_confirm": True}
+            )
+        return response
+
+    async def delete_supabase_auth_user(self, user_id: str):
+        """
+        Deleta um usuário do Supabase Auth.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{settings.SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                }
             )
         return response
 

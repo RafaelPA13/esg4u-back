@@ -1,5 +1,7 @@
 import re
 from pydantic import BaseModel, EmailStr, field_validator
+from typing import Optional
+from uuid import UUID
 
 class CadastroSchema(BaseModel):
     nome: str
@@ -26,3 +28,23 @@ class CadastroSchema(BaseModel):
 class LoginSchema(BaseModel):
     email: str
     senha: str
+    
+class UserResponseSchema(BaseModel):
+    id: UUID
+    nome: str
+    email: EmailStr
+    score_esg: Optional[int] = 0
+    trust_score: Optional[int] = 0
+    reputacao: Optional[int] = 0
+    admin: bool = False
+
+    class Config:
+        from_attributes = True # Para compatibilidade com ORM/dict
+
+class UserUpdateSchema(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[EmailStr] = None
+    score_esg: Optional[int] = None
+    trust_score: Optional[int] = None
+    reputacao: Optional[int] = None
+    admin: Optional[bool] = None
