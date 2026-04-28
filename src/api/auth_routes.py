@@ -1,5 +1,10 @@
 from fastapi import APIRouter, HTTPException, Form, Header, Query, Depends, Request
-from src.schemas.auth_schema import CadastroSchema, LoginSchema, UserResponseSchema, UserUpdateSchema
+from src.schemas.auth_schema import (
+    CadastroSchema,
+    LoginSchema,
+    UserResponseSchema,
+    UserUpdateSchema,
+)
 from src.services.auth_service import auth_service
 from typing import Dict, Any
 from uuid import UUID
@@ -37,7 +42,7 @@ async def validar_codigo(codigo: str = Form(...)):
         if "expirado" in str(e):
             raise HTTPException(status_code=400, detail=str(e))
         raise HTTPException(status_code=400, detail=str(e))
-    
+
 
 @router.post("/reenviar_codigo")
 async def reenviar_codigo(email: str = Form(...)):
@@ -46,7 +51,7 @@ async def reenviar_codigo(email: str = Form(...)):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
 
 @router.post("/solicitar_reset")
 async def solicitar_reset(email: str = Form(...)):
@@ -58,44 +63,33 @@ async def solicitar_reset(email: str = Form(...)):
 
 @router.put("/redefinir_senha")
 async def redefinir_senha(
-    token: str = Form(...),
-    senha: str = Form(...),
-    confirmar_senha: str = Form(...)
+    token: str = Form(...), senha: str = Form(...), confirmar_senha: str = Form(...)
 ):
     try:
-        return await auth_service.redefinir_senha(
-            token,
-            senha,
-            confirmar_senha
-        )
+        return await auth_service.redefinir_senha(token, senha, confirmar_senha)
     except Exception as e:
         if "idênticas" in str(e):
             raise HTTPException(status_code=400, detail=str(e))
         raise HTTPException(status_code=400, detail=str(e))
-    
-    
+
+
 @router.post("/login")
 async def login(data: LoginSchema):
     try:
-        result = await auth_service.login(
-            data.email,
-            data.senha
-        )
+        result = await auth_service.login(data.email, data.senha)
         return result
     except Exception:
-        raise HTTPException(
-            status_code=401,
-            detail="Credenciais inválidas"
-        )
-        
-        
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+
+
 @router.get("/me")
 async def me(authorization: str = Header(...)):
     try:
         return await auth_service.me(authorization)
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
-    
+
+
 @router.get("/usuarios", response_model=Dict[str, Any])
 async def get_all_users_endpoint(
     request: Request,
@@ -107,7 +101,9 @@ async def get_all_users_endpoint(
     all_query_params = dict(request.query_params)
 
     # Remove os parâmetros de paginação para deixar apenas os filtros
-    filters = {k: v for k, v in all_query_params.items() if k not in ["page", "per_page"]}
+    filters = {
+        k: v for k, v in all_query_params.items() if k not in ["page", "per_page"]
+    }
 
     result = await auth_service.get_all_users(page, per_page, filters)
 
@@ -115,21 +111,22 @@ async def get_all_users_endpoint(
         raise HTTPException(status_code=204, detail="Nenhum registro encontrado")
     return result
 
+
 @router.get("/usuario/{user_id}", response_model=UserResponseSchema)
 async def get_user_by_id_endpoint(
-    user_id: UUID,
-    admin_user: dict = Depends(get_current_admin_user)
+    user_id: UUID, admin_user: dict = Depends(get_current_admin_user)
 ):
     user = await auth_service.get_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=204, detail="Nenhum registro encontrado")
     return user
 
+
 @router.put("/usuario/{user_id}")
 async def update_user_endpoint(
     user_id: UUID,
     user_data: UserUpdateSchema,
-    admin_user: dict = Depends(get_current_admin_user)
+    admin_user: dict = Depends(get_current_admin_user),
 ):
     try:
         await auth_service.update_user_data(user_id, user_data)
@@ -137,10 +134,10 @@ async def update_user_endpoint(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.delete("/usuario/{user_id}")
 async def delete_user_endpoint(
-    user_id: UUID,
-    admin_user: dict = Depends(get_current_admin_user)
+    user_id: UUID, admin_user: dict = Depends(get_current_admin_user)
 ):
     try:
         await auth_service.delete_user_by_id(user_id)
