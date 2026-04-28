@@ -273,5 +273,26 @@ class UserRepository:
                 }
             )
         return response
+    
+    async def list_all_users_for_export(self):
+        """
+        Retorna todos os usuários sem paginação e sem filtros para exportação CSV.
+        """
+        query_params: dict[str, str] = {
+            "select": "id,nome,email,score_esg,trust_score,reputacao,admin",
+            "order": "nome.asc",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
+                },
+                params=query_params,
+            )
+        return response
 
 user_repository = UserRepository()

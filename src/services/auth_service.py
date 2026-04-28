@@ -3,6 +3,8 @@ import random
 import asyncio
 import httpx
 import re
+import csv
+import io
 from math import ceil
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -493,5 +495,27 @@ class AuthService:
 
         return {"message": "Usuário Excluído."}
 
+    async def exportar_usuarios_csv(self):
+        """
+        Busca todos os usuários e gera um CSV em memória.
+        """
+        response = await user_repository.list_all_users_for_export()
+
+        if response.status_code not in (200, 206):
+            response.raise_for_status()
+
+        users_data = response.json()
+
+        if not users_data:
+            return None
+
+        output = io.StringIO()
+        fieldnames = ["id", "nome", "email", "score_esg", "trust_score", "reputacao", "admin"]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(users_data)
+        output.seek(0)
+
+        return output.getvalue()
 
 auth_service = AuthService()

@@ -1,4 +1,6 @@
+import io
 from fastapi import APIRouter, HTTPException, Form, Header, Query, Depends, Request
+from fastapi.responses import StreamingResponse
 from src.schemas.auth_schema import (
     CadastroSchema,
     LoginSchema,
@@ -110,6 +112,29 @@ async def get_all_users_endpoint(
     if result is None:
         raise HTTPException(status_code=204, detail="Nenhum registro encontrado")
     return result
+
+
+@router.get("/usuarios/exportar-csv")
+async def exportar_usuarios_csv_endpoint(
+    admin_user: dict = Depends(get_current_admin_user),
+):
+    """
+    Exporta todos os usuários da plataforma em formato CSV.
+    Sem filtros — sempre retorna todos os registros.
+    Requer autenticação admin.
+    """
+    csv_content = await auth_service.exportar_usuarios_csv()
+
+    if csv_content is None:
+        raise HTTPException(status_code=204, detail="Nenhum registro encontrado.")
+
+    return StreamingResponse(
+        io.StringIO(csv_content),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=usuarios.csv"
+        }
+    )
 
 
 @router.get("/usuario/{user_id}", response_model=UserResponseSchema)
