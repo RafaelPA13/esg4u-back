@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Header, Depends
+from fastapi import APIRouter, HTTPException, Header, Depends, Query
 from fastapi.responses import StreamingResponse
-from src.schemas.diagnostico_schema import PerguntaSchema
+from src.schemas.diagnostico_schema import PerguntaSchema, RespostaLoteSchema
 import io
 
 from src.services.auth_service import auth_service
@@ -16,6 +16,18 @@ async def get_current_admin_user(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail="Usuário não autorizado")
     return user_info
 
+# Dependência para qualquer usuário autenticado
+async def get_current_user(authorization: str = Header(...)):
+    user_info = await auth_service.me(authorization)
+    if not user_info:
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciais expiradas, logue novamente",
+        )
+    return user_info
+
+
+# Perguntas (Admin)
 
 # POST /diagnostico/pergunta
 @router.post("/pergunta", status_code=201)
@@ -104,3 +116,30 @@ async def deletar_pergunta(
         raise HTTPException(status_code=404, detail=result["erro"])
 
     return None  # 204 não retorna corpo
+
+
+# Questionário (Todos os usuários)
+
+# GET /diagnostico/sessao-atual
+@router.get("/sessao-atual")
+async def obter_sessao_atual(
+    current_user: dict = Depends(get_current_user),
+):
+    usuario_id = current_user["id"]
+    result = await diagnostico_service.obter_sessao_atual(usuario_id)
+    return result["data"]
+
+
+@router.post("/respostas")
+async def salvar_respostas_lote(
+    payload: RespostaLoteSchema,
+    finalizado: bool = Query(default=False),
+    current_user: dict = Depends(get_current_user),
+):
+    result = await diagnostico_service.salvar_respostas_lote(
+        [r.model_dump() for r in payload.respostas],
+        finalizado=finalizado,
+    )
+    if result["status"] != 200:
+        raise HTTPException(status_code=result["status"], detail=result.get("erro"))
+    return {"sucesso": result["sucesso"]}

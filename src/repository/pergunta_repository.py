@@ -86,6 +86,43 @@ class PerguntaRepository:
                 json={"indice": novo_indice},
             )
         return response
+    
+    async def listar_ativas(self):
+        """Retorna apenas as perguntas com ativa=true, ordenadas por índice."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/perguntas",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
+                },
+                params={
+                    "ativa": "eq.true",
+                    "select": "*",
+                    "order": "indice.asc",
+                },
+            )
+        return response
+    
+    async def listar_ativas_com_indice_gte(self, indice: int):
+        """Retorna perguntas ativas com índice >= ao informado."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/perguntas",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
+                },
+                params={
+                    "ativa": "eq.true",
+                    "indice": f"gte.{indice}",
+                    "select": "id,indice",
+                    "order": "indice.asc",
+                },
+            )
+        return response
 
     async def deletar(self, pergunta_id: int):
         async with httpx.AsyncClient() as client:

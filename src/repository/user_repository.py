@@ -294,5 +294,35 @@ class UserRepository:
                 params=query_params,
             )
         return response
+    
+    
+    async def atualizar_status_questionario(self, usuario_id: str, status: str):
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json",
+                },
+                params={"id": f"eq.{usuario_id}"},
+                json={"status_questionario": status},
+            )
+        return response
+    
+    async def atualizar_score_esg(self, usuario_id: str, novo_score: int):
+        """Sobrescreve o score_esg do usuário com o valor recalculado."""
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json",
+                },
+                params={"id": f"eq.{usuario_id}"},
+                json={"score_esg": novo_score},
+            )
+        return response
 
 user_repository = UserRepository()

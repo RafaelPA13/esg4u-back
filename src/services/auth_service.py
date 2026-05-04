@@ -380,6 +380,7 @@ class AuthService:
             "nome": usuario.get("nome"),
             "email": usuario.get("email") or email,
             "admin": usuario.get("admin", False),
+            "status_questionario": usuario.get("status_questionario", "Não Respondido")
         }
 
     async def get_all_users(self, page: int, per_page: int, filters: dict):
