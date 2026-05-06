@@ -4,6 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from src.api.auth_routes import router as auth_router
 from src.api.diagnostico_routes import router as diagnostico_router
+from src.api.evidencias_routes import router as evidencias_router
 
 app = FastAPI(
     title="ESG4U API",
@@ -25,6 +26,7 @@ app.add_middleware(
 # Routers
 app.include_router(auth_router)
 app.include_router(diagnostico_router)
+app.include_router(evidencias_router)
 
 
 @app.get("/")

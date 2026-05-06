@@ -310,7 +310,7 @@ class UserRepository:
             )
         return response
     
-    async def atualizar_score_esg(self, usuario_id: str, novo_score: int):
+    async def atualizar_score_esg(self, usuario_id: str, novo_score: float):
         """Sobrescreve o score_esg do usuário com o valor recalculado."""
         async with httpx.AsyncClient() as client:
             response = await client.patch(

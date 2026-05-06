@@ -3,6 +3,7 @@ import io
 from src.repository.pergunta_repository import pergunta_repository
 from src.repository.respostas_repository import resposta_repository
 from src.repository.user_repository import user_repository
+from src.repository.evidencias_repository import evidencias_repository
 
 class DiagnosticoService:
 
@@ -197,7 +198,7 @@ class DiagnosticoService:
 
         # Upsert de todas as respostas
         response = await resposta_repository.upsert_lote(respostas)
-        
+
         if response.status_code == 409:
             # logar o erro do Supabase
             print("DEBUG 409 Supabase:", response.text)
@@ -207,18 +208,57 @@ class DiagnosticoService:
                     f"Conflito ao salvar respostas: {response.text}"
                 ),
             }
-        
+
         if response.status_code not in (200, 201):
             response.raise_for_status()
 
-        # Recalcula score do zero com base em TODAS as respostas do usuário
-        todas_res = await resposta_repository.listar_por_usuario(usuario_id)
-        todas = todas_res.json() if todas_res.status_code == 200 else []
-        score_total = sum(r.get("pontuacao", 0) for r in todas)
+        # --- Lógica para atualizar pontuação de evidências existentes ---
+        for r in respostas:
+            id_pergunta = r["id_pergunta"]
+            nova_pontuacao_resposta = r["pontuacao"]
+
+            # Busca a resposta salva para obter o ID da resposta no banco
+            # (necessário para buscar a evidência associada)
+            res_salva = await resposta_repository.listar_por_usuario_e_pergunta(
+                usuario_id, id_pergunta
+            )
+            if res_salva.status_code == 200 and res_salva.json():
+                id_resposta_salva = res_salva.json()[0]["id"]
+
+                # Verifica se há evidência para essa resposta
+                res_evid = await evidencias_repository.buscar_por_resposta(id_resposta_salva)
+                if res_evid.status_code == 200 and res_evid.json():
+                    evidencia = res_evid.json()[0]
+                    nova_pontuacao_evidencia = round(nova_pontuacao_resposta * 1.5, 2)
+                    await evidencias_repository.atualizar_pontuacao(evidencia["id"], nova_pontuacao_evidencia)
+        # --- Fim da lógica de atualização de evidências ---
+
+        # Recalcula score do zero somando TODAS as pontuações (respostas + evidências)
+        # (incluindo as que já estavam salvas e não foram reenviadas)
+        res_respostas_usuario = await resposta_repository.listar_por_usuario(usuario_id)
+        respostas_usuario = res_respostas_usuario.json() if res_respostas_usuario.status_code == 200 else []
+
+        ids_respostas_usuario = [r["id"] for r in respostas_usuario]
+        mapa_evidencias_usuario = {}
+        if ids_respostas_usuario:
+            res_evid_usuario = await evidencias_repository.listar_ids_respostas_com_evidencia(
+                ids_respostas_usuario
+            )
+            if res_evid_usuario.status_code == 200:
+                for e in res_evid_usuario.json():
+                    mapa_evidencias_usuario[e["id_resposta"]] = e
+
+        score_total = 0.0
+        for r in respostas_usuario:
+            evid = mapa_evidencias_usuario.get(r["id"])
+            if evid:
+                score_total += evid["pontuacao"] # Usa a pontuação da evidência (multiplicada)
+            else:
+                score_total += r["pontuacao"] # Usa a pontuação da resposta original
 
         await user_repository.atualizar_score_esg(usuario_id, score_total)
 
-        # Atualiza status
+        # Atualiza status do questionário
         novo_status = "Finalizada" if finalizado else "Em Andamento"
         await user_repository.atualizar_status_questionario(usuario_id, novo_status)
 
