@@ -14,6 +14,7 @@ from src.repository.user_repository import user_repository
 from src.services.email_service import email_service
 from src.db.supabase_client import supabase
 from src.schemas.auth_schema import UserResponseSchema, UserUpdateSchema
+from src.services.convites_service import convites_service
 
 
 class AuthService:
@@ -65,6 +66,9 @@ class AuthService:
         if create_user_response.status_code >= 400:
             raise Exception("Erro ao salvar usuário")
 
+        # Verificar e atualizar convites
+        await convites_service.atualizar_status_convite_por_email(email, "Convertido")
+
         # Gerar código de verificação
         codigo = self.gerar_codigo()
 
@@ -81,10 +85,10 @@ class AuthService:
         )
 
         # Buscar template de e-mail
-        template_data = await user_repository.get_template()
-
+        template_data = await user_repository.get_template_by_name("template_email_codigo")
+        
         if not template_data or len(template_data) == 0:
-            raise Exception("Template de email não encontrado")
+            return {"status": 400, "erro": "Template de email de convite não encontrado"}
 
         template = template_data[0].get("conteudo", "")
 
@@ -181,9 +185,13 @@ class AuthService:
             )
 
         # Template
-        template_data = await user_repository.get_template()
+        template_data = await user_repository.get_template_by_name("template_email_codigo")
+        
+        if not template_data or len(template_data) == 0:
+            return {"status": 400, "erro": "Template de email de convite não encontrado"}
 
         template = template_data[0].get("conteudo", "")
+
         html = template.replace("{{CODIGO_DE_CONFIRMACAO}}", novo_codigo)
 
         asyncio.create_task(
@@ -223,19 +231,12 @@ class AuthService:
         )
 
         # Buscar template
-        async with httpx.AsyncClient() as client:
-            template_res = await client.get(
-                f"{settings.SUPABASE_URL}/rest/v1/parametros",
-                headers={
-                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
-                },
-                params={"id": "eq.template_email_reset_senha"},
-            )
+        template_data = await user_repository.get_template_by_name("template_email_reset_senha")
+        
+        if not template_data or len(template_data) == 0:
+            return {"status": 400, "erro": "Template de email de convite não encontrado"}
 
-        template_data = template_res.json()
-
-        template = template_data[0]["conteudo"]
+        template = template_data[0].get("conteudo", "")
 
         link = f"http://localhost:5173/autenticacao/redefinir-senha?token={token}"  # TODO: Alterar para o link da hospedagem
 

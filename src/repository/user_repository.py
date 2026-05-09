@@ -53,17 +53,20 @@ class UserRepository:
     
     # Template
     
-    async def get_template(self):
+    async def get_template_by_name(self, template_name: str):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{settings.SUPABASE_URL}/rest/v1/parametros",
                 headers={
                     "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
                     "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
                 },
-                params={"id": "eq.template_email_codigo"}
+                params={
+                    "id": f"eq.{template_name}",
+                    "select": "conteudo",
+                },
             )
-
         return response.json()
     
     # Código / Reset de senha
