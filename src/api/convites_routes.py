@@ -39,6 +39,24 @@ async def enviar_convite(
     return {"sucesso": result["sucesso"]}
 
 
+# GET: /convites/exportar-csv (para admin)
+@router.get("/exportar-csv", status_code=200)
+async def exportar_convites_csv(
+    current_user: Dict = Depends(get_current_admin_user), # Somente admin
+):
+    csv_data = await convites_service.exportar_convites_csv()
+
+    if csv_data is None:
+        raise HTTPException(status_code=204, detail="Nenhum convite para exportar.")
+
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=convites.csv"},
+    )
+    return response
+
+
 # GET: /convites/{remetente_uuid}
 @router.get("/{remetente_uuid}")
 async def listar_convites_por_remetente(
@@ -95,21 +113,3 @@ async def listar_todos_convites(
     if result["status"] == 200:
         return result["data"]
     raise HTTPException(status_code=500, detail="Erro interno do servidor")
-
-
-# GET: /convites/exportar-csv (para admin)
-@router.get("/exportar-csv", status_code=200)
-async def exportar_convites_csv(
-    current_user: Dict = Depends(get_current_admin_user), # Somente admin
-):
-    csv_data = await convites_service.exportar_convites_csv()
-
-    if csv_data is None:
-        raise HTTPException(status_code=204, detail="Nenhum convite para exportar.")
-
-    response = StreamingResponse(
-        io.StringIO(csv_data),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=convites.csv"},
-    )
-    return response
