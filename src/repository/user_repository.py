@@ -1,5 +1,4 @@
 import httpx
-import uuid
 from src.core.config import settings
 from src.db.supabase_client import supabase
 

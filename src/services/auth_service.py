@@ -31,6 +31,8 @@ class AuthService:
     async def cadastrar(self, data):
         nome = data.nome
         email = data.email
+        estado = data.estado
+        cidade = data.cidade
         senha = data.senha
         confirmar = data.confirmar_senha
 
@@ -60,7 +62,13 @@ class AuthService:
 
         # Criar na tabela usuarios
         create_user_response = await user_repository.create_user(
-            {"id": user_id, "nome": nome, "email": email}
+            {
+                "id": user_id, 
+                "nome": nome, 
+                "email": email,
+                "estado": estado,
+                "cidade": cidade,
+            }
         )
 
         if create_user_response.status_code >= 400:

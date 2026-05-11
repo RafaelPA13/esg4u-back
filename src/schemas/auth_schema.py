@@ -6,6 +6,8 @@ from uuid import UUID
 class CadastroSchema(BaseModel):
     nome: str
     email: EmailStr
+    estado: str
+    cidade: str
     senha: str
     confirmar_senha: str
 
