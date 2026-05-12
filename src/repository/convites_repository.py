@@ -49,13 +49,18 @@ class ConvitesRepository:
     async def listar_todos(self, page: int, per_page: int, filtros: dict):
         offset = (page - 1) * per_page
         params = {
-            "select": "id,remetente,destinatario,status,dt_envio",
+            "select": "id,remetente(nome),destinatario,status,dt_envio",
             "offset": offset,
             "limit": per_page,
             "order": "dt_envio.desc",
         }
+        
         for key, value in filtros.items():
-            params[key] = f"eq.{value}"
+            # Se o filtro for por remetente, aplicamos no nome do remetente
+            if key == "remetente":
+                params["remetente.nome"] = f"ilike.%{value}%" # Busca por nome (case-insensitive)
+            else:
+                params[key] = f"eq.{value}"
 
         async with httpx.AsyncClient() as client:
             response = await client.get(

@@ -32,15 +32,12 @@ class ConvitesService:
                     html,
                 )
             )
+            # 4. Adicionar registro na tabela convites
+            await convites_repository.criar(remetente_id, destinatario_email)
+            return {"status": 201, "sucesso": "Convite enviado por e-mail"}
         except Exception as e:
             return {"status": 400, "erro": f"Erro ao enviar convite por e-mail: {e}"}
 
-        # 4. Adicionar registro na tabela convites
-        res_convite = await convites_repository.criar(remetente_id, destinatario_email)
-        if res_convite.status_code not in (200, 201):
-            res_convite.raise_for_status() # Levanta exceção se houver erro no Supabase
-
-        return {"status": 201, "sucesso": "Convite enviado por e-mail"}
 
     async def listar_convites_por_remetente(self, remetente_id: str, page: int, per_page: int, filtros: dict):
         response = await convites_repository.listar_por_remetente(remetente_id, page, per_page, filtros)
@@ -100,9 +97,10 @@ class ConvitesService:
 
         formatted_convites = []
         for convite in convites_data:
+            remetente_nome = convite.get("remetente", {}).get("nome", "Desconhecido")
             formatted_convites.append({
                 "id_convite": convite["id"],
-                "remetente": convite["remetente"],
+                "remetente": remetente_nome,
                 "destinatario": convite["destinatario"],
                 "status": convite["status"],
                 "dt_envio": date.fromisoformat(convite["dt_envio"]).strftime("%d/%m/%Y"),
