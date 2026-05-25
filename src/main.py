@@ -6,6 +6,7 @@ from src.api.auth_routes import router as auth_router
 from src.api.diagnostico_routes import router as diagnostico_router
 from src.api.evidencias_routes import router as evidencias_router
 from src.api.convites_routes import router as convites_router
+from src.api.validacoes_routes import router as validacoes_router
 
 app = FastAPI(
     title="ESG4U API",
@@ -29,7 +30,7 @@ app.include_router(auth_router)
 app.include_router(diagnostico_router)
 app.include_router(evidencias_router)
 app.include_router(convites_router)
-
+app.include_router(validacoes_router)
 
 @app.get("/")
 def health_check():

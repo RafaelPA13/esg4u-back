@@ -50,3 +50,11 @@ class UserUpdateSchema(BaseModel):
     trust_score: Optional[int] = None
     reputacao: Optional[int] = None
     admin: Optional[bool] = None
+    
+class UserAprovadorSchema(BaseModel):
+    id: UUID
+    nome: str
+    email: EmailStr
+
+    class Config:
+        from_attributes = True

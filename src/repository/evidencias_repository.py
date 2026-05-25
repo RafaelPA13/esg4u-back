@@ -42,6 +42,24 @@ class EvidenciasRepository:
                 },
             )
         return response
+    
+    async def listar_por_respostas(self, ids_respostas: list[int]):
+        """Retorna evidências cujo id_resposta está na lista fornecida."""
+        if not ids_respostas:
+            # Retorna um objeto httpx.Response vazio para manter o padrão
+            return httpx.Response(200, json=[])
+
+        ids_str = ",".join(str(i) for i in ids_respostas)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/evidencias",
+                headers=HEADERS,
+                params={
+                    "id_resposta": f"in.({ids_str})",
+                    "select": "id,id_resposta,evidencia,pontuacao,created_at",
+                },
+            )
+        return response
 
     async def atualizar_pontuacao(self, evidencia_id: int, nova_pontuacao: float):
         async with httpx.AsyncClient() as client:

@@ -6,9 +6,10 @@ from src.schemas.auth_schema import (
     LoginSchema,
     UserResponseSchema,
     UserUpdateSchema,
+    UserAprovadorSchema,
 )
 from src.services.auth_service import auth_service
-from typing import Dict, Any
+from typing import Dict, Any, List
 from uuid import UUID
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -19,6 +20,13 @@ async def get_current_admin_user(authorization: str = Header(...)):
     user_info = await auth_service.me(authorization)
     if not user_info or not user_info.get("admin"):
         raise HTTPException(status_code=401, detail="Usuário não autorizado")
+    return user_info
+
+# Dependência para obter o usuário autenticado (não necessariamente admin)
+async def get_current_user(authorization: str = Header(...)):
+    user_info = await auth_service.me(authorization)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
     return user_info
 
 
@@ -169,3 +177,17 @@ async def delete_user_endpoint(
         return {"message": "Usuário Excluído."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/usuarios/aprovadores", response_model=List[UserAprovadorSchema])
+async def get_aprovadores_endpoint(
+    current_user: dict = Depends(get_current_user) # Usa a nova dependência
+):
+    """
+    Retorna usuários da plataforma para serem opções do select de aprovadores,
+    excluindo o próprio usuário que fez a requisição.
+    """
+    aprovadores = await auth_service.get_aprovadores(current_user["id"])
+    if not aprovadores:
+        raise HTTPException(status_code=204, detail="Nenhum usuário encontrado")
+    return aprovadores

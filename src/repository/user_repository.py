@@ -297,6 +297,27 @@ class UserRepository:
             )
         return response
     
+    async def list_all_users_excluding_one(self, exclude_user_id: str):
+        """
+        Retorna todos os usuários (id, nome, email) exceto o usuário com o ID fornecido.
+        """
+        query_params: dict[str, str] = {
+            "select": "id,nome,email",
+            "id": f"neq.{exclude_user_id}", # Filtra para excluir o usuário
+            "order": "nome.asc",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/usuarios",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
+                },
+                params=query_params,
+            )
+        return response
     
     async def atualizar_status_questionario(self, usuario_id: str, status: str):
         async with httpx.AsyncClient() as client:

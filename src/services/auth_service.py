@@ -8,12 +8,13 @@ import io
 from math import ceil
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
+from typing import List
 
 from src.core.config import settings
 from src.repository.user_repository import user_repository
 from src.services.email_service import email_service
 from src.db.supabase_client import supabase
-from src.schemas.auth_schema import UserResponseSchema, UserUpdateSchema
+from src.schemas.auth_schema import UserResponseSchema, UserUpdateSchema, UserAprovadorSchema
 from src.services.convites_service import convites_service
 
 
@@ -68,6 +69,7 @@ class AuthService:
                 "email": email,
                 "estado": estado,
                 "cidade": cidade,
+                
             }
         )
 
@@ -527,5 +529,22 @@ class AuthService:
         output.seek(0)
 
         return output.getvalue()
+    
+    async def get_aprovadores(self, current_user_id: str) -> List[UserAprovadorSchema]:
+        """
+        Retorna uma lista de usuários que podem ser aprovadores,
+        excluindo o usuário que fez a requisição.
+        """
+        response = await user_repository.list_all_users_excluding_one(current_user_id)
+
+        if response.status_code not in (200, 206):
+            response.raise_for_status()
+
+        users_data = response.json()
+
+        if not users_data:
+            return []
+
+        return [UserAprovadorSchema(**user) for user in users_data]
 
 auth_service = AuthService()
