@@ -1,4 +1,6 @@
 import asyncio
+import csv
+import io
 
 from src.repository.validacoes_repository import validacoes_repository
 from src.repository.pergunta_repository import pergunta_repository
@@ -368,5 +370,151 @@ class ValidacoesService:
 
         return {"status": 200, "data": resultado}
 
+    async def listar_todas_admin(
+        self,
+        page: int,
+        per_page: int,
+        filtro_pedido_por: str | None = None,
+        filtro_avaliador: str | None = None,
+    ):
+        """
+        GET /validacoes/
+        Lista paginada de todas as validações para o admin.
+        Enriquece cada validação com dados da pergunta.
+        RN4: filtro pedido_por filtra por nome, avaliador filtra por email.
+        RN6: pedido_por retorna o nome do usuário.
+        """
+        resp = await validacoes_repository.listar_todas_paginado(
+            page=page,
+            per_page=per_page,
+            filtro_pedido_por=filtro_pedido_por,
+            filtro_avaliador=filtro_avaliador,
+        )
+
+        if resp.status_code not in (200, 206):
+            return {"status": resp.status_code, "erro": resp.text}
+
+        validacoes_raw = resp.json() or []
+
+        # Extrai total de registros do header Content-Range (ex: "0-9/42")
+        content_range = resp.headers.get("content-range", "")
+        try:
+            total = int(content_range.split("/")[1])
+        except (IndexError, ValueError):
+            total = len(validacoes_raw)
+
+        # Filtro por nome do pedido_por (feito em memória pois a coluna guarda email)
+        # Busca o nome de cada solicitante único e filtra
+        if filtro_pedido_por:
+            emails_unicos = list({v["pedido_por"] for v in validacoes_raw})
+            mapa_nomes: dict[str, str] = {}
+            for email in emails_unicos:
+                res_u = await user_repository.find_by_email(email)
+                if res_u.status_code == 200 and res_u.json():
+                    mapa_nomes[email] = res_u.json()[0].get("nome", email)
+                else:
+                    mapa_nomes[email] = email
+
+            validacoes_raw = [
+                v for v in validacoes_raw
+                if filtro_pedido_por.lower() in mapa_nomes.get(v["pedido_por"], "").lower()
+            ]
+            total = len(validacoes_raw)  # recalcula após filtro em memória
+        else:
+            # Monta mapa de nomes para todos sem filtro
+            emails_unicos = list({v["pedido_por"] for v in validacoes_raw})
+            mapa_nomes = {}
+            for email in emails_unicos:
+                res_u = await user_repository.find_by_email(email)
+                if res_u.status_code == 200 and res_u.json():
+                    mapa_nomes[email] = res_u.json()[0].get("nome", email)
+                else:
+                    mapa_nomes[email] = email
+
+        if not validacoes_raw:
+            return {"status": 204, "sucesso": "Nenhuma validação encontrada"}
+
+        # Enriquece com dados da pergunta via resposta
+        resultado = []
+        for v in validacoes_raw:
+            res_resposta = await resposta_repository.buscar_por_id(v["id_resposta"])
+            if res_resposta.status_code != 200 or not res_resposta.json():
+                continue
+            resposta = res_resposta.json()[0]
+
+            res_pergunta = await pergunta_repository.buscar_por_id(resposta["id_pergunta"])
+            if res_pergunta.status_code != 200 or not res_pergunta.json():
+                continue
+            pergunta = res_pergunta.json()[0]
+
+            resultado.append({
+                "id_pergunta": pergunta["id"],
+                "pergunta": pergunta["pergunta"],
+                "eixo_esg": pergunta["eixo_esg"],
+                "resposta": {
+                    "id_resposta": v["id_resposta"],
+                    "pontuacao": resposta["pontuacao"],
+                },
+                "validacao": {
+                    "id_validacao": v["id"],
+                    "validado": v["validado"],
+                    "pedido_por": mapa_nomes.get(v["pedido_por"], v["pedido_por"]),  # RN6: nome
+                    "avaliador": v["avaliador"],
+                    "pontuacao": v["pontuacao"],
+                },
+            })
+
+        pages = max(1, -(-total // per_page))  # ceil division
+
+        return {
+            "status": 200,
+            "data": {
+                "validacoes": resultado,
+                "registros": total,
+                "pages": pages,
+                "page": page,
+                "per_page": per_page,
+                "prox_page": page < pages,
+                "prev_page": page > 1,
+            },
+        }
+
+    async def exportar_validacoes_csv(self):
+        """
+        GET /validacoes/exportar_csv
+        Exporta todos os registros de validação como CSV.
+        """
+
+        resp = await validacoes_repository.listar_todas_para_exportacao()
+        if resp.status_code not in (200, 206):
+            return None
+
+        validacoes = resp.json() or []
+        if not validacoes:
+            return None
+
+        # Enriquece pedido_por com nome do usuário
+        emails_unicos = list({v["pedido_por"] for v in validacoes})
+        mapa_nomes: dict[str, str] = {}
+        for email in emails_unicos:
+            res_u = await user_repository.find_by_email(email)
+            if res_u.status_code == 200 and res_u.json():
+                mapa_nomes[email] = res_u.json()[0].get("nome", email)
+            else:
+                mapa_nomes[email] = email
+
+        output = io.StringIO()
+        fieldnames = ["id", "pedido_por", "avaliador", "validado", "pontuacao", "id_resposta", "created_at"]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+
+        for v in validacoes:
+            writer.writerow({
+                **v,
+                "pedido_por": mapa_nomes.get(v["pedido_por"], v["pedido_por"]),  # nome em vez de email
+            })
+
+        output.seek(0)
+        return output.getvalue()
 
 validacoes_service = ValidacoesService()

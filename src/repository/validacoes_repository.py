@@ -132,6 +132,60 @@ class ValidacoesRepository:
                 },
             )
         return resp
+    
+    async def listar_todas_paginado(
+        self,
+        page: int,
+        per_page: int,
+        filtro_pedido_por: str | None = None,
+        filtro_avaliador: str | None = None,
+    ):
+        """
+        Retorna validações paginadas com filtros opcionais.
+        pedido_por filtra por nome (ilike), avaliador filtra por email (ilike).
+        """
+        offset = (page - 1) * per_page
+
+        params: dict = {
+            "select": "id,validado,pontuacao,pedido_por,avaliador,id_resposta",
+            "order": "created_at.desc",
+        }
+
+        if filtro_avaliador:
+            params["avaliador"] = f"ilike.%{filtro_avaliador}%"
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/{self.table}",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
+                    "Range": f"{offset}-{offset + per_page - 1}",
+                    "Prefer": "count=exact",
+                },
+                params=params,
+            )
+        return resp
+
+    async def listar_todas_para_exportacao(self):
+        """
+        Retorna todos os registros de validação sem paginação para exportação CSV.
+        """
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{settings.SUPABASE_URL}/rest/v1/{self.table}",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Accept": "application/json",
+                },
+                params={
+                    "select": "id,pedido_por,avaliador,validado,pontuacao,created_at,id_resposta",
+                    "order": "created_at.desc",
+                },
+            )
+        return resp
 
 
 validacoes_repository = ValidacoesRepository()
