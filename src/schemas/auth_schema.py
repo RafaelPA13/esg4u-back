@@ -35,8 +35,7 @@ class UserResponseSchema(BaseModel):
     id: UUID
     nome: str
     email: EmailStr
-    score_esg: Optional[int] = 0
-    trust_score: Optional[int] = 0
+    score_esg: Optional[float] = 0
     reputacao: Optional[int] = 0
     admin: bool = False
 
@@ -46,8 +45,7 @@ class UserResponseSchema(BaseModel):
 class UserUpdateSchema(BaseModel):
     nome: Optional[str] = None
     email: Optional[EmailStr] = None
-    score_esg: Optional[int] = None
-    trust_score: Optional[int] = None
+    score_esg: Optional[float] = None
     reputacao: Optional[int] = None
     admin: Optional[bool] = None
     
