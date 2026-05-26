@@ -49,7 +49,7 @@ class ConvitesRepository:
     async def listar_todos(self, page: int, per_page: int, filtros: dict):
         offset = (page - 1) * per_page
         params = {
-            "select": "id,remetente(nome),destinatario,status,dt_envio",
+            "select": "id,remetente!inner(nome),destinatario,status,dt_envio",
             "offset": offset,
             "limit": per_page,
             "order": "dt_envio.desc",

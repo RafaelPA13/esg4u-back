@@ -65,6 +65,7 @@ async def listar_convites_por_remetente(
     per_page: int = Query(10, ge=1, le=100),
     destinatario: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    dt_envio: Optional[str] = Query(None),
     current_user: Dict = Depends(get_current_user), # Autenticação para qualquer usuário
 ):
     # Verifica se o usuário logado está tentando ver os próprios convites
@@ -78,6 +79,8 @@ async def listar_convites_por_remetente(
         filtros["destinatario"] = destinatario
     if status:
         filtros["status"] = status
+    if dt_envio:
+        filtros["dt_envio"] = dt_envio
 
     result = await convites_service.listar_convites_por_remetente(
         remetente_uuid, page, per_page, filtros
@@ -97,6 +100,7 @@ async def listar_todos_convites(
     remetente: Optional[str] = Query(None),
     destinatario: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    dt_envio: Optional[str] = Query(None),
     current_user: Dict = Depends(get_current_admin_user), # Autenticação para admin
 ):
     filtros = {}
@@ -106,6 +110,8 @@ async def listar_todos_convites(
         filtros["destinatario"] = destinatario
     if status:
         filtros["status"] = status
+    if dt_envio:
+        filtros["dt_envio"] = dt_envio
 
     result = await convites_service.listar_todos_convites(page, per_page, filtros)
     if result["status"] == 204:
