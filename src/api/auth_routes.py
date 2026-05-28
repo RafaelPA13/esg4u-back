@@ -1,5 +1,6 @@
 import io
-from fastapi import APIRouter, HTTPException, Form, Header, Query, Depends, Request
+import json
+from fastapi import APIRouter, HTTPException, Form, Header, Query, Depends, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from src.schemas.auth_schema import (
     CadastroSchema,
@@ -158,12 +159,21 @@ async def get_user_by_id_endpoint(
 @router.put("/usuario/{user_id}")
 async def update_user_endpoint(
     user_id: UUID,
-    user_data: UserUpdateSchema,
+    data: str = Form(...),
+    foto: UploadFile | None = File(None),
     admin_user: dict = Depends(get_current_admin_user),
 ):
     try:
-        await auth_service.update_user_data(user_id, user_data)
+        parsed_data = UserUpdateSchema(**json.loads(data))
+
+        await auth_service.update_user_data(
+            user_id=user_id,
+            user_data=parsed_data,
+            foto=foto,
+        )
+
         return {"message": "Usuário Atualizado."}
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

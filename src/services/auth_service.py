@@ -7,7 +7,8 @@ import csv
 import io
 from math import ceil
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
+from fastapi import UploadFile
+from uuid import UUID, uuid4
 from typing import List
 
 from src.core.config import settings
@@ -391,7 +392,17 @@ class AuthService:
             "nome": usuario.get("nome"),
             "email": usuario.get("email") or email,
             "admin": usuario.get("admin", False),
-            "status_questionario": usuario.get("status_questionario", "Não Respondido")
+            "status_questionario": usuario.get("status_questionario", "Não Respondido"),
+            "score_esg": usuario.get("score_esg", 0),
+            "reputacao": usuario.get("reputacao", 0),
+            "estado": usuario.get("estado"),
+            "cidade": usuario.get("cidade"),
+            "grau_escolaridade": usuario.get("grau_escolaridade"),
+            "faixa_etaria": usuario.get("faixa_etaria"),
+            "situacao_profissional": usuario.get("situacao_profissional"),
+            "tipo_moradia": usuario.get("tipo_moradia"),
+            "pessoas_familia": usuario.get("pessoas_familia"),
+            "foto_perfil": usuario.get("foto_perfil"),
         }
 
     async def get_all_users(self, page: int, per_page: int, filters: dict):
@@ -453,38 +464,63 @@ class AuthService:
             return UserResponseSchema(**response.json()[0])
         return "Nenhum registro encontrado"
 
-    async def update_user_data(self, user_id: UUID, user_data: UserUpdateSchema):
+    async def update_user_data(
+        self,
+        user_id: UUID,
+        user_data: UserUpdateSchema,
+        foto: UploadFile | None = None,
+    ):
         """
         Atualiza os dados de um usuário.
         """
-        update_dict = user_data.model_dump(
-            exclude_unset=True
-        )  # Pega apenas os campos que foram passados
+
+        update_dict = user_data.model_dump(exclude_unset=True)
+
+        # Upload da foto
+        if foto:
+            extensao = foto.filename.split(".")[-1]
+            nome_arquivo = f"{uuid4()}.{extensao}"
+
+            foto_bytes = await foto.read()
+
+            foto_url = await user_repository.upload_profile_photo(
+                file_name=nome_arquivo,
+                file_bytes=foto_bytes,
+                content_type=foto.content_type,
+            )
+
+            update_dict["foto_perfil"] = foto_url
 
         if not update_dict:
             raise Exception("Nenhum dado para atualizar.")
 
-        # Se o email for atualizado, atualiza no Supabase Auth também
+        # Atualiza email no Auth
         if "email" in update_dict and update_dict["email"]:
             auth_update_response = await user_repository.update_supabase_auth_email(
-                str(user_id), update_dict["email"]
+                str(user_id),
+                update_dict["email"],
             )
+
             if auth_update_response.status_code >= 400:
                 raise Exception(
-                    f"Erro ao atualizar email no Supabase Auth: {auth_update_response.text}"
+                    f"Erro ao atualizar email no Supabase Auth: "
+                    f"{auth_update_response.text}"
                 )
 
-        # Atualiza na tabela 'usuarios'
+        # Atualiza tabela usuarios
         db_update_response = await user_repository.update_user(
-            str(user_id), update_dict
+            str(user_id),
+            update_dict,
         )
+
         if db_update_response.status_code >= 400:
             raise Exception(
-                f"Erro ao atualizar usuário no banco de dados: {db_update_response.text}"
+                f"Erro ao atualizar usuário no banco de dados: "
+                f"{db_update_response.text}"
             )
 
         return {"message": "Usuário Atualizado."}
-
+    
     async def delete_user_by_id(self, user_id: UUID):
         """
         Deleta um usuário do Supabase Auth e da tabela 'usuarios'.

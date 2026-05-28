@@ -259,7 +259,7 @@ class DiagnosticoService:
         await user_repository.atualizar_score_esg(usuario_id, score_total)
 
         # Atualiza status do questionário
-        novo_status = "Finalizada" if finalizado else "Em Andamento"
+        novo_status = "Finalizado" if finalizado else "Em Andamento"
         await user_repository.atualizar_status_questionario(usuario_id, novo_status)
 
         return {"status": 200, "sucesso": "Respostas salvas"}

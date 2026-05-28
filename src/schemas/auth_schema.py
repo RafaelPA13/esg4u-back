@@ -48,7 +48,15 @@ class UserUpdateSchema(BaseModel):
     score_esg: Optional[float] = None
     reputacao: Optional[int] = None
     admin: Optional[bool] = None
-    
+    estado: Optional[str] = None
+    cidade: Optional[str] = None
+    grau_escolaridade: Optional[str] = None
+    faixa_etaria: Optional[str] = None
+    situacao_profissional: Optional[str] = None
+    tipo_moradia: Optional[str] = None
+    pessoas_familia: Optional[str] = None
+    foto_perfil: Optional[str] = None
+
 class UserAprovadorSchema(BaseModel):
     id: UUID
     nome: str

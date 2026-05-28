@@ -347,5 +347,36 @@ class UserRepository:
                 json={"score_esg": novo_score},
             )
         return response
+    
+    async def upload_profile_photo(
+        self,
+        file_name: str,
+        file_bytes: bytes,
+        content_type: str,
+    ):
+        """
+        Faz upload da foto de perfil no bucket foto_perfil.
+        """
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{settings.SUPABASE_URL}/storage/v1/object/foto_perfil/{file_name}",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": content_type,
+                },
+                content=file_bytes,
+            )
+
+        if response.status_code >= 400:
+            raise Exception(
+                f"Erro ao fazer upload da imagem: {response.text}"
+            )
+
+        return (
+            f"{settings.SUPABASE_URL}/storage/v1/object/public/"
+            f"foto_perfil/{file_name}"
+        )
 
 user_repository = UserRepository()
