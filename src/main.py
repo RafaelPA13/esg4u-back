@@ -21,8 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://www.esg4u.com.br/",
-        "https://esg4u.com.br/",
+        "https://www.esg4u.com.br",
         
     ],
     allow_credentials=True,
