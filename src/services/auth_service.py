@@ -249,7 +249,7 @@ class AuthService:
 
         template = template_data[0].get("conteudo", "")
 
-        link = f"http://localhost:5173/autenticacao/redefinir-senha?token={token}"  # TODO: Alterar para o link da hospedagem
+        link = f"https://www.esg4u.com.br/autenticacao/redefinir-senha?token={token}"
 
         html = template.replace("{{LINK_RESET}}", link)
 
