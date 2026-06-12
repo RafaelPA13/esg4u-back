@@ -161,7 +161,7 @@ async def update_user_endpoint(
     user_id: UUID,
     data: str = Form(...),
     foto: UploadFile | None = File(None),
-    admin_user: dict = Depends(get_current_admin_user),
+    current_user: dict = Depends(get_current_user),
 ):
     try:
         parsed_data = UserUpdateSchema(**json.loads(data))
