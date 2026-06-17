@@ -44,6 +44,18 @@ class AuthService:
 
         if senha != confirmar:
             raise Exception("As senhas precisam ser idênticas")
+        
+        if len(senha) < 8:
+            raise Exception("Senha deve ter no mínimo 8 caracteres")
+
+        if not re.search(r"[A-Z]", senha):
+            raise Exception("Senha deve ter letra maiúscula")
+
+        if not re.search(r"[a-z]", senha):
+            raise Exception("Senha deve ter letra minúscula")
+
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", senha):
+            raise Exception("Senha deve ter caractere especial")
 
         # Verificar se já existe no banco
         existente = await user_repository.find_by_email(email)
